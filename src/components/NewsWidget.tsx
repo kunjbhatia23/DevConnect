@@ -1,8 +1,6 @@
-// src/components/NewsWidget.tsx
 import React, { useState } from 'react';
-import { Info, ChevronDown } from 'lucide-react';
+import { Info, ChevronDown, ChevronUp } from 'lucide-react';
 
-// Mock data to simulate news stories
 const newsItems = [
   {
     headline: 'The top skills companies are hiring for now',
@@ -33,21 +31,21 @@ const newsItems = [
 
 const NewsWidget: React.FC = () => {
   const [showMore, setShowMore] = useState(false);
-  const itemsToShow = showMore ? newsItems : newsItems.slice(0, 4);
+  const itemsToShow = showMore ? newsItems : newsItems.slice(0, 3);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-secondary-200 overflow-hidden">
+    <div className="bg-white dark:bg-secondary-800 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 overflow-hidden">
       <div className="p-4 flex justify-between items-center">
-        <h2 className="font-bold text-secondary-900">DevConnect News</h2>
-        <Info size={16} className="text-secondary-500" />
+        <h2 className="font-bold text-secondary-900 dark:text-secondary-200">DevConnect News</h2>
+        <Info size={16} className="text-secondary-500 dark:text-secondary-400" />
       </div>
 
       <ul>
         {itemsToShow.map((item, index) => (
-          <li key={index} className="px-4 py-2 hover:bg-secondary-100">
+          <li key={index} className="px-4 py-3 hover:bg-secondary-100 dark:hover:bg-secondary-700/50 transition-colors">
             <a href="#" className="group">
-              <h3 className="font-semibold text-secondary-800 text-sm group-hover:text-primary-700">{item.headline}</h3>
-              <div className="flex items-center space-x-2 text-xs text-secondary-500 mt-1">
+              <h3 className="font-semibold text-secondary-800 dark:text-secondary-300 text-sm group-hover:text-primary-700 dark:group-hover:text-primary-400">{item.headline}</h3>
+              <div className="flex items-center space-x-2 text-xs text-secondary-500 dark:text-secondary-400 mt-1">
                 <span>{item.ago}</span>
                 <span>•</span>
                 <span>{item.readers}</span>
@@ -57,17 +55,15 @@ const NewsWidget: React.FC = () => {
         ))}
       </ul>
 
-      {!showMore && (
-        <div className="p-4">
-          <button 
-            onClick={() => setShowMore(true)} 
-            className="text-sm font-semibold text-secondary-600 hover:text-primary-700 flex items-center space-x-1"
-          >
-            <span>Show more</span>
-            <ChevronDown size={16} />
-          </button>
-        </div>
-      )}
+      <div className="p-4 border-t border-secondary-100 dark:border-secondary-700">
+        <button 
+          onClick={() => setShowMore(!showMore)} 
+          className="text-sm font-semibold text-secondary-600 dark:text-secondary-400 hover:text-primary-700 dark:hover:text-primary-400 flex items-center space-x-1"
+        >
+          <span>{showMore ? 'Show less' : 'Show more'}</span>
+          {showMore ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+      </div>
     </div>
   );
 };

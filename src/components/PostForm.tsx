@@ -1,8 +1,8 @@
-// src/components/PostForm.tsx
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
-// Removed 'useAuth' as it's no longer needed here
+import { useAuth } from '../contexts/AuthContext';
 import { Send, Image as ImageIcon, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface PostFormProps {
   onPostCreated: () => void;
@@ -15,7 +15,7 @@ const PostForm: React.FC<PostFormProps> = ({ onPostCreated }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Removed unused 'logout' variable
+  const { logout } = useAuth();
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -71,22 +71,28 @@ const PostForm: React.FC<PostFormProps> = ({ onPostCreated }) => {
       setText('');
       setImageFiles([]);
       setImagePreviews([]);
+      toast.success('Post created successfully!');
       onPostCreated();
     } catch (err: any) {
-        setError(err.response?.data?.message || 'An unexpected error occurred.');
+        if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+            setError('Authentication error. Your session may have expired. Please log out and log back in.');
+            setTimeout(() => logout(), 5000);
+        } else {
+            setError(err.response?.data?.message || 'An unexpected error occurred.');
+        }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-secondary-200 p-6 mb-6">
+    <div className="bg-white dark:bg-secondary-800 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 p-6 mb-6">
       <form onSubmit={handleSubmit}>
         <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="What's on your mind?"
-            className="w-full p-3 border border-secondary-300 rounded-lg resize-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-shadow"
+            className="w-full p-3 border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 rounded-lg resize-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-shadow"
             rows={3}
             maxLength={500}
         />
@@ -107,12 +113,12 @@ const PostForm: React.FC<PostFormProps> = ({ onPostCreated }) => {
           </div>
         )}
         <div className="flex justify-between items-center mt-4">
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-secondary-500 hover:text-primary-600 hover:bg-secondary-100 rounded-full transition-colors">
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-secondary-500 dark:text-secondary-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-full transition-colors">
             <ImageIcon size={24} />
           </button>
           <input type="file" multiple accept="image/png, image/jpeg, image/gif" onChange={handleImageChange} className="hidden" ref={fileInputRef} />
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-secondary-500">{text.length}/500</span>
+            <span className="text-sm text-secondary-500 dark:text-secondary-400">{text.length}/500</span>
             <button
               type="submit"
               disabled={isSubmitting || (!text.trim() && imageFiles.length === 0)}

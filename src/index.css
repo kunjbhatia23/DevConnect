@@ -1,9 +1,13 @@
+/* src/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-secondary-100 text-secondary-700 antialiased;
+    @apply bg-secondary-100 text-secondary-700 antialiased transition-colors duration-300;
+  }
+  .dark body {
+    @apply bg-secondary-900 text-secondary-300;
   }
 }

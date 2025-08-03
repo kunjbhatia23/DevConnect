@@ -1,10 +1,8 @@
-// src/pages/Profile.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import PostCard from '../components/PostCard';
-// Removed the unused 'User' import from this line
 import { Calendar, MessageSquare, Camera } from 'lucide-react';
 
 interface UserProfile {
@@ -20,9 +18,9 @@ interface Post {
   _id: string;
   text: string;
   images?: string[];
-  likes: string[]; 
+  likes: string[];
   author: {
-    _id:string;
+    _id: string;
     name: string;
     profilePicture?: string;
   };
@@ -64,7 +62,7 @@ const Profile: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1024 * 1024 * 2) { // 2MB limit for PFP
+    if (file.size > 1024 * 1024 * 2) {
         alert("Profile picture cannot exceed 2MB.");
         return;
     }
@@ -110,7 +108,7 @@ const Profile: React.FC = () => {
   if (error || !profile) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <h2 className="text-2xl font-bold text-secondary-700">{error || 'Profile not found.'}</h2>
+        <h2 className="text-2xl font-bold text-secondary-700 dark:text-secondary-300">{error || 'Profile not found.'}</h2>
       </div>
     );
   }
@@ -119,15 +117,16 @@ const Profile: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="bg-white rounded-xl shadow-lg border border-secondary-200 overflow-hidden mb-8">
-        <div className="h-32 bg-gradient-to-r from-primary-500 to-indigo-600"></div>
-        <div className="p-6 relative">
-          <div className="absolute -top-16 left-6">
+      {/* --- New Profile Header --- */}
+      <div className="bg-white dark:bg-secondary-800 rounded-xl shadow-lg border border-secondary-200 dark:border-secondary-700 overflow-hidden mb-8">
+        <div className="h-40 bg-gradient-to-r from-primary-500 to-indigo-600" />
+        <div className="px-6 pb-6 relative">
+          <div className="flex items-end -mt-16">
             <input type="file" accept="image/png, image/jpeg" onChange={handlePfpChange} className="hidden" ref={fileInputRef} />
             <div
               onClick={() => isOwnProfile && fileInputRef.current?.click()}
-              className={`w-32 h-32 rounded-full border-4 border-white overflow-hidden group relative bg-primary-100
-                          flex items-center justify-center text-5xl font-bold text-primary-600
+              className={`w-32 h-32 rounded-full border-4 border-white dark:border-secondary-800 overflow-hidden group relative bg-primary-100
+                          flex items-center justify-center text-5xl font-bold text-primary-600 dark:text-primary-400
                           ${isOwnProfile ? 'cursor-pointer' : ''}`}
             >
               {profile.profilePicture ? (
@@ -142,36 +141,43 @@ const Profile: React.FC = () => {
               }
             </div>
           </div>
-          <div className="pt-16">
-            <div className="flex items-center justify-between mb-2">
-              <h1 className="text-3xl font-bold text-secondary-900">{profile.name}</h1>
-              {isOwnProfile && <span className="px-3 py-1 bg-primary-100 text-primary-800 text-xs font-medium rounded-full">This is you</span>}
+
+          <div className="pt-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold text-secondary-900 dark:text-secondary-200">{profile.name}</h1>
+              {isOwnProfile && <span className="px-3 py-1 bg-primary-100 dark:bg-primary-500/20 text-primary-800 dark:text-primary-300 text-xs font-medium rounded-full">This is you</span>}
             </div>
-            <div className="flex items-center text-secondary-500 mb-4">
-              <Calendar className="w-4 h-4 mr-2" />
-              <span>Joined in {formatJoinDate(profile.createdAt)}</span>
-            </div>
-            {profile.bio && <p className="text-secondary-700 leading-relaxed mb-4">{profile.bio}</p>}
-            <div className="flex items-center space-x-6 text-sm text-secondary-600 border-t border-secondary-200 pt-4 mt-4">
+            
+            <p className="text-secondary-700 dark:text-secondary-300 leading-relaxed my-2">
+              {profile.bio}
+            </p>
+
+            <div className="flex items-center space-x-6 text-sm text-secondary-500 dark:text-secondary-400 mt-4">
+              <div className="flex items-center">
+                <Calendar className="w-4 h-4 mr-1.5" />
+                <span>Joined in {formatJoinDate(profile.createdAt)}</span>
+              </div>
               <div className="flex items-center">
                 <MessageSquare className="w-4 h-4 mr-1.5" />
-                <span><span className="font-semibold text-secondary-800">{posts.length}</span> {posts.length === 1 ? 'post' : 'posts'}</span>
+                <span><span className="font-semibold text-secondary-800 dark:text-secondary-200">{posts.length}</span> {posts.length === 1 ? 'post' : 'posts'}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* --- Posts Section --- */}
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-secondary-800 pb-4">
+        <h2 className="text-xl font-bold text-secondary-800 dark:text-secondary-200 pb-4">
           {isOwnProfile ? 'Your Posts' : `Posts by ${profile.name}`}
         </h2>
         {posts.length > 0 ? (
           posts.map(post => <PostCard key={post._id} post={post} />)
         ) : (
-          <div className="bg-white rounded-lg shadow-sm border border-secondary-200 p-8 text-center">
+          <div className="bg-white dark:bg-secondary-800 rounded-lg shadow-sm border border-secondary-200 dark:border-secondary-700 p-8 text-center">
             <MessageSquare className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-secondary-900 mb-2">No posts yet</h3>
-            <p className="text-secondary-600">
+            <h3 className="text-lg font-medium text-secondary-900 dark:text-secondary-200 mb-2">No posts yet</h3>
+            <p className="text-secondary-600 dark:text-secondary-400">
               {isOwnProfile ? 'Share your first post to get started!' : `${profile.name} hasn't posted anything yet.`}
             </p>
           </div>

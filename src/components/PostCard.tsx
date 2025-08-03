@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import CommentSection from './CommentSection';
+import toast from 'react-hot-toast';
 import { Clock, X, ThumbsUp, MessageCircle, Send, Repeat, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Post {
@@ -24,16 +25,36 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const { user } = useAuth();
-  const [viewingPost, setViewingPost] = useState<Post | null>(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [likes, setLikes] = useState<string[]>(post.likes);
   const [isLiked, setIsLiked] = useState(user ? post.likes.includes(user._id) : false);
   const [showComments, setShowComments] = useState(false);
+  const [viewingPost, setViewingPost] = useState<Post | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     setIsLiked(user ? likes.includes(user._id) : false);
   }, [user, likes]);
 
+  const handleLike = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!user) {
+      toast.error('Please log in to like a post.', { id: 'login-toast' });
+      return;
+    }
+    try {
+      const newLikes = isLiked ? likes.filter(id => id !== user._id) : [...likes, user._id];
+      setLikes(newLikes);
+      setIsLiked(!isLiked);
+      if (viewingPost) {
+        setViewingPost({ ...viewingPost, likes: newLikes });
+      }
+      await axios.put(`/posts/${post._id}/like`);
+    } catch (error) {
+      console.error('Failed to like post', error);
+      setLikes(post.likes);
+    }
+  };
+  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!viewingPost) return;
@@ -55,22 +76,6 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
     };
   }, [viewingPost]);
 
-  const handleLike = async () => {
-    if (!user) {
-      alert('Please log in to like a post.');
-      return;
-    }
-    try {
-      const newLikes = isLiked ? likes.filter(id => id !== user._id) : [...likes, user._id];
-      setLikes(newLikes);
-      setIsLiked(!isLiked);
-      await axios.put(`/posts/${post._id}/like`);
-    } catch (error) {
-      console.error('Failed to like post', error);
-      setLikes(post.likes);
-    }
-  };
-  
   const openImageViewer = (postToView: Post, index: number) => {
     setViewingPost(postToView);
     setCurrentImageIndex(index);
@@ -140,52 +145,54 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
                 </>
               )}
             </div>
-            <div className="w-full lg:w-1/3 h-1/2 lg:h-full flex flex-col bg-white overflow-y-auto">
-              <div className="p-4 border-b">
+            <div className="w-full lg:w-1/3 h-1/2 lg:h-full flex flex-col bg-white dark:bg-secondary-800 overflow-y-auto">
+              <div className="p-4 border-b dark:border-secondary-700">
                  <div className="flex items-center space-x-3">
                   <Link to={`/profile/${viewingPost.author._id}`} className="flex-shrink-0">
-                    {viewingPost.author.profilePicture ? <img src={viewingPost.author.profilePicture} alt={viewingPost.author.name} className="w-10 h-10 rounded-full object-cover" /> : <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center font-bold text-primary-600 text-md">{getInitials(viewingPost.author.name)}</div>}
+                    {viewingPost.author.profilePicture ? <img src={viewingPost.author.profilePicture} alt={viewingPost.author.name} className="w-10 h-10 rounded-full object-cover" /> : <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center font-bold text-primary-600 dark:text-primary-400 text-md">{getInitials(viewingPost.author.name)}</div>}
                   </Link>
                   <div>
-                    <Link to={`/profile/${viewingPost.author._id}`} className="font-semibold text-secondary-900 hover:text-primary-600 text-sm">{viewingPost.author.name}</Link>
-                    <p className="text-xs text-secondary-500">{formatDate(viewingPost.createdAt)}</p>
+                    <Link to={`/profile/${viewingPost.author._id}`} className="font-semibold text-secondary-900 dark:text-secondary-200 hover:text-primary-600 text-sm">{viewingPost.author.name}</Link>
+                    <p className="text-xs text-secondary-500 dark:text-secondary-400">{formatDate(viewingPost.createdAt)}</p>
                   </div>
                 </div>
-                {viewingPost.text && <p className="text-secondary-800 text-sm mt-3 whitespace-pre-wrap">{viewingPost.text}</p>}
+                {viewingPost.text && <p className="text-secondary-800 dark:text-secondary-300 text-sm mt-3 whitespace-pre-wrap">{viewingPost.text}</p>}
               </div>
-              <div className="p-4 border-b">
-                <div className="flex justify-around text-secondary-600">
-                  <button className="flex items-center space-x-2 hover:text-primary-600 transition-colors py-2 px-3 rounded-md"><ThumbsUp size={20} /><span>Like</span></button>
-                  <button className="flex items-center space-x-2 hover:text-primary-600 transition-colors py-2 px-3 rounded-md"><MessageCircle size={20} /><span>Comment</span></button>
-                  <button className="flex items-center space-x-2 hover:text-primary-600 transition-colors py-2 px-3 rounded-md"><Repeat size={20} /><span>Repost</span></button>
-                  <button className="flex items-center space-x-2 hover:text-primary-600 transition-colors py-2 px-3 rounded-md"><Send size={20} /><span>Send</span></button>
+              <div className="p-4 border-b dark:border-secondary-700">
+                <div className="flex justify-around text-secondary-600 dark:text-secondary-400">
+                  <button onClick={handleLike} className={`flex items-center space-x-2 hover:text-primary-600 dark:hover:text-primary-400 transition-colors py-2 px-3 rounded-md ${isLiked ? 'text-primary-600 dark:text-primary-400 font-semibold' : ''}`}><ThumbsUp size={20} /><span>Like</span></button>
+                  <button className="flex items-center space-x-2 hover:text-primary-600 dark:hover:text-primary-400 transition-colors py-2 px-3 rounded-md"><MessageCircle size={20} /><span>Comment</span></button>
+                  <button className="flex items-center space-x-2 hover:text-primary-600 dark:hover:text-primary-400 transition-colors py-2 px-3 rounded-md"><Repeat size={20} /><span>Repost</span></button>
+                  <button className="flex items-center space-x-2 hover:text-primary-600 dark:hover:text-primary-400 transition-colors py-2 px-3 rounded-md"><Send size={20} /><span>Send</span></button>
                 </div>
               </div>
-              <div className="flex-grow p-4"><p className="text-center text-secondary-400 text-sm">Comments will be shown here.</p></div>
+              <div className="flex-grow">
+                <CommentSection postId={viewingPost._id} />
+              </div>
             </div>
           </div>
         </div>
       )}
-      <div className="bg-white rounded-xl shadow-sm border border-secondary-200 overflow-hidden transition-shadow hover:shadow-lg">
+      <div className="bg-white dark:bg-secondary-800 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 overflow-hidden transition-shadow hover:shadow-lg">
         <div className="p-6">
             <div className="flex items-start space-x-4">
             <Link to={`/profile/${post.author._id}`} className="flex-shrink-0">
-                {post.author.profilePicture ? <img src={post.author.profilePicture} alt={post.author.name} className="w-12 h-12 rounded-full object-cover" /> : <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center font-bold text-primary-600 text-lg">{getInitials(post.author.name)}</div>}
+                {post.author.profilePicture ? <img src={post.author.profilePicture} alt={post.author.name} className="w-12 h-12 rounded-full object-cover" /> : <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center font-bold text-primary-600 dark:text-primary-400 text-lg">{getInitials(post.author.name)}</div>}
             </Link>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-3 mb-1">
-                <Link to={`/profile/${post.author._id}`} className="font-semibold text-secondary-900 hover:text-primary-600 transition-colors truncate">{post.author.name}</Link>
-                <span className="text-secondary-400">·</span>
-                <div className="flex items-center text-secondary-500 text-sm"><Clock className="w-4 h-4 mr-1.5" /><span>{formatDate(post.createdAt)}</span></div>
+                <Link to={`/profile/${post.author._id}`} className="font-semibold text-secondary-900 dark:text-secondary-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate">{post.author.name}</Link>
+                <span className="text-secondary-400 dark:text-secondary-500">·</span>
+                <div className="flex items-center text-secondary-500 dark:text-secondary-400 text-sm"><Clock className="w-4 h-4 mr-1.5" /><span>{formatDate(post.createdAt)}</span></div>
                 </div>
-                {post.text && <p className="text-secondary-800 leading-relaxed whitespace-pre-wrap">{post.text}</p>}
+                {post.text && <p className="text-secondary-800 dark:text-secondary-300 leading-relaxed whitespace-pre-wrap">{post.text}</p>}
             </div>
             </div>
         </div>
         {hasImages && (
           <div className={`mt-2 ${post.images && post.images.length > 1 ? 'grid grid-cols-2 gap-px' : ''}`}>
             {post.images && post.images.map((image, index) => (
-               <div key={index} className="bg-secondary-50 cursor-pointer relative group" onClick={() => openImageViewer(post, index)}>
+               <div key={index} className="bg-secondary-50 dark:bg-secondary-900 cursor-pointer relative group" onClick={() => openImageViewer(post, index)}>
                   <img src={image} alt={`Post content ${index + 1}`} className="w-full h-full object-cover max-h-[500px]" />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-colors"></div>
                </div>
@@ -194,15 +201,15 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
         )}
         <div className="px-6 pt-3">
           {likes.length > 0 && (
-            <div className="flex items-center space-x-1 text-secondary-500 pb-2 border-b border-secondary-100">
+            <div className="flex items-center space-x-1 text-secondary-500 dark:text-secondary-400 pb-2 border-b border-secondary-100 dark:border-secondary-700">
               <ThumbsUp size={14} className="text-primary-500" />
               <span className="text-sm">{likes.length}</span>
             </div>
           )}
         </div>
-        <div className="px-4 py-1 flex justify-around text-secondary-600">
-            <button onClick={handleLike} className={`flex-1 flex items-center justify-center space-x-2 hover:bg-secondary-100 p-2 rounded-md transition-colors ${isLiked ? 'text-primary-600 font-semibold' : ''}`}><ThumbsUp size={20} /><span>Like</span></button>
-            <button onClick={() => setShowComments(!showComments)} className="flex-1 flex items-center justify-center space-x-2 hover:bg-secondary-100 p-2 rounded-md transition-colors"><MessageCircle size={20} /><span>Comment</span></button>
+        <div className="px-4 py-1 flex justify-around text-secondary-600 dark:text-secondary-400">
+            <button onClick={handleLike} className={`flex-1 flex items-center justify-center space-x-2 hover:bg-secondary-100 dark:hover:bg-secondary-700/50 p-2 rounded-md transition-colors ${isLiked ? 'text-primary-600 dark:text-primary-400 font-semibold' : ''}`}><ThumbsUp size={20} /><span>Like</span></button>
+            <button onClick={() => setShowComments(!showComments)} className="flex-1 flex items-center justify-center space-x-2 hover:bg-secondary-100 dark:hover:bg-secondary-700/50 p-2 rounded-md transition-colors"><MessageCircle size={20} /><span>Comment</span></button>
         </div>
         {showComments && <CommentSection postId={post._id} />}
       </div>
