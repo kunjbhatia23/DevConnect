@@ -19,7 +19,7 @@ interface UserProfile {
 interface Post {
   _id: string;
   text: string;
-  image?: string;
+  images?: string[]; 
   author: {
     _id: string;
     name: string;

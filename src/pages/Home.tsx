@@ -1,16 +1,21 @@
+// src/pages/Home.tsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import PostCard from '../components/PostCard';
 import PostForm from '../components/PostForm';
-import { MessageSquare, Users, Rss } from 'lucide-react';
+import ProfileCard from '../components/ProfileCard';
+import NewsWidget from '../components/NewsWidget'; // Import the new component
+import { MessageSquare, Rss } from 'lucide-react';
 
 interface Post {
   _id: string;
   text: string;
+  images?: string[];
   author: {
     _id: string;
     name: string;
+    profilePicture?: string;
   };
   createdAt: string;
 }
@@ -47,52 +52,51 @@ const Home: React.FC = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl shadow-lg p-8 mb-6">
-        <div className="flex items-center space-x-4">
-          <Users className="w-12 h-12 opacity-80" />
-          <div>
-            <h1 className="text-2xl font-bold">
-              {user ? `Welcome back, ${user.name}!` : 'Welcome to DevConnect'}
-            </h1>
-            <p className="text-primary-200 mt-1">
-              {user ? 'Share your thoughts with the professional community.' : 'Connect with developers and share your journey.'}
-            </p>
+    <div className="max-w-6xl mx-auto py-8 px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      {/* --- Left Column (Desktop Only) --- */}
+      <aside className="hidden lg:block lg:col-span-4 xl:col-span-3 sticky top-24">
+        <ProfileCard />
+      </aside>
+
+      {/* --- Center Column (Main Content) --- */}
+      <main className="col-span-1 lg:col-span-8 xl:col-span-6">
+        {user && <PostForm onPostCreated={fetchPosts} />}
+
+        <div className={`space-y-4 ${user ? 'mt-6' : ''}`}>
+          <div className="flex items-center space-x-2">
+            <Rss className="w-6 h-6 text-secondary-500" />
+            <h2 className="text-xl font-bold text-secondary-800">Community Feed</h2>
           </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
+          {posts.length === 0 && !loading ? (
+            <div className="bg-white rounded-lg shadow-sm border border-secondary-200 p-8 text-center">
+              <MessageSquare className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-secondary-900 mb-2">The feed is empty</h3>
+              <p className="text-secondary-600">
+                {user ? 'Be the first to share something!' : 'Sign in to see posts from the community.'}
+              </p>
+            </div>
+          ) : (
+            posts.map((post) => (
+              <PostCard key={post._id} post={post} />
+            ))
+          )}
         </div>
-      </div>
+      </main>
 
-      {/* Post Form - Only show if logged in */}
-      {user && <PostForm onPostCreated={fetchPosts} />}
+       {/* --- Right Column --- */}
+       <aside className="hidden xl:block xl:col-span-3 sticky top-24">
+         {/* Add the new NewsWidget here */}
+         <NewsWidget />
+       </aside>
 
-      {/* Posts Feed */}
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2 py-4">
-          <Rss className="w-6 h-6 text-secondary-500" />
-          <h2 className="text-xl font-bold text-secondary-800">Community Feed</h2>
-        </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <p className="text-red-600 text-sm">{error}</p>
-          </div>
-        )}
-
-        {posts.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm border border-secondary-200 p-8 text-center">
-            <MessageSquare className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-secondary-900 mb-2">The feed is empty</h3>
-            <p className="text-secondary-600">
-              {user ? 'Be the first to share something!' : 'Sign in to see posts from the community.'}
-            </p>
-          </div>
-        ) : (
-          posts.map((post) => (
-            <PostCard key={post._id} post={post} />
-          ))
-        )}
-      </div>
     </div>
   );
 };

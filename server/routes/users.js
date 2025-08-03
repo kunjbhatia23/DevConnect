@@ -2,11 +2,12 @@
 import express from 'express';
 import User from '../models/User.js';
 import protect from '../middleware/auth.js';
-import { multerUploads } from '../middleware/multer.js';
+// Import the correct middleware
+import { singleUpload } from '../middleware/multer.js';
 
 const router = express.Router();
 
-// GET user profile by ID (no changes needed here)
+// GET user profile by ID (no changes)
 router.get('/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
@@ -20,7 +21,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update user profile picture
-router.put('/pfp', protect, multerUploads, async (req, res) => {
+router.put('/pfp', protect, singleUpload, async (req, res) => { // Use singleUpload here
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No image file provided.' });
   }

@@ -1,7 +1,7 @@
 // src/components/PostForm.tsx
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
+// Removed 'useAuth' as it's no longer needed here
 import { Send, Image as ImageIcon, X } from 'lucide-react';
 
 interface PostFormProps {
@@ -10,39 +10,48 @@ interface PostFormProps {
 
 const PostForm: React.FC<PostFormProps> = ({ onPostCreated }) => {
   const [text, setText] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { logout } = useAuth();
+  // Removed unused 'logout' variable
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 1024 * 1024 * 5) { // 5MB limit
-        setError('File size cannot exceed 5MB.');
-        return;
-      }
-      setImageFile(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (files.length + imageFiles.length > 5) {
+      setError('You can upload a maximum of 5 images.');
+      return;
+    }
+
+    const newFiles = [...imageFiles, ...files];
+    setImageFiles(newFiles);
+
+    const newPreviews: string[] = [...imagePreviews];
+    files.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        newPreviews.push(reader.result as string);
+        if (newPreviews.length === newFiles.length) {
+            setImagePreviews(newPreviews);
+        }
       };
       reader.readAsDataURL(file);
-    }
+    });
   };
 
-  const removeImage = () => {
-    setImagePreview(null);
-    setImageFile(null);
+  const removeImage = (indexToRemove: number) => {
+    setImageFiles(imageFiles.filter((_, index) => index !== indexToRemove));
+    setImagePreviews(imagePreviews.filter((_, index) => index !== indexToRemove));
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() && !imageFile) {
-      setError('Post must contain text or an image.');
+    if (!text.trim() && imageFiles.length === 0) {
+      setError('Post must contain text or at least one image.');
       return;
     }
 
@@ -51,24 +60,20 @@ const PostForm: React.FC<PostFormProps> = ({ onPostCreated }) => {
 
     const formData = new FormData();
     formData.append('text', text);
-    if (imageFile) {
-      formData.append('image', imageFile);
-    }
+    imageFiles.forEach(file => {
+      formData.append('images', file);
+    });
 
     try {
       await axios.post('/posts', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setText('');
-      removeImage();
+      setImageFiles([]);
+      setImagePreviews([]);
       onPostCreated();
     } catch (err: any) {
-      if (err.response && (err.response.status === 401 || err.response.status === 403)) {
-        setError('Authentication error. Your session may have expired. Please log out and log back in.');
-        setTimeout(() => logout(), 5000);
-      } else {
-        setError(err.response?.data?.message || 'An unexpected error occurred. Please try again.');
-      }
+        setError(err.response?.data?.message || 'An unexpected error occurred.');
     } finally {
       setIsSubmitting(false);
     }
@@ -85,28 +90,32 @@ const PostForm: React.FC<PostFormProps> = ({ onPostCreated }) => {
             rows={3}
             maxLength={500}
         />
-        {imagePreview && (
-          <div className="mt-4 relative">
-            <img src={imagePreview} alt="Preview" className="rounded-lg max-h-80 w-auto" />
-            <button
-              type="button"
-              onClick={removeImage}
-              className="absolute top-2 right-2 bg-black bg-opacity-50 text-white rounded-full p-1 hover:bg-opacity-75 transition-colors"
-            >
-              <X size={20} />
-            </button>
+        {imagePreviews.length > 0 && (
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+            {imagePreviews.map((preview, index) => (
+              <div key={index} className="relative aspect-square">
+                <img src={preview} alt={`Preview ${index}`} className="rounded-lg w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(index)}
+                  className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full p-0.5 hover:bg-opacity-75 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ))}
           </div>
         )}
         <div className="flex justify-between items-center mt-4">
           <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-secondary-500 hover:text-primary-600 hover:bg-secondary-100 rounded-full transition-colors">
             <ImageIcon size={24} />
           </button>
-          <input type="file" accept="image/png, image/jpeg, image/gif" onChange={handleImageChange} className="hidden" ref={fileInputRef} />
+          <input type="file" multiple accept="image/png, image/jpeg, image/gif" onChange={handleImageChange} className="hidden" ref={fileInputRef} />
           <div className="flex items-center space-x-4">
             <span className="text-sm text-secondary-500">{text.length}/500</span>
             <button
               type="submit"
-              disabled={isSubmitting || (!text.trim() && !imageFile)}
+              disabled={isSubmitting || (!text.trim() && imageFiles.length === 0)}
               className="flex items-center space-x-2 px-5 py-2.5 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-lg transform hover:-translate-y-0.5"
             >
               <Send className="w-4 h-4" />

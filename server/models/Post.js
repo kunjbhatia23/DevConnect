@@ -7,9 +7,9 @@ const postSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'Post cannot exceed 500 characters']
   },
-  image: {
-    type: String, // Will store the Base64 Data URI
-    default: ''
+  images: { // Changed 'image' to 'images' and type to an array of Strings
+    type: [String], 
+    default: []
   },
   author: {
     type: mongoose.Schema.Types.ObjectId,

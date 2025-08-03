@@ -3,11 +3,12 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import Post from '../models/Post.js';
 import protect from '../middleware/auth.js';
-import { multerUploads } from '../middleware/multer.js';
+// Import the correct middleware
+import { multipleUploads } from '../middleware/multer.js';
 
 const router = express.Router();
 
-// GET all posts (no changes needed here, but included for completeness)
+// GET all posts (no changes)
 router.get('/', async (req, res) => {
   try {
     const posts = await Post.find().sort({ createdAt: -1 }).limit(50);
@@ -17,8 +18,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Create a new post
-router.post('/', protect, multerUploads, [
+// Create a new post with multiple images
+router.post('/', protect, multipleUploads, [ // Use multipleUploads here
   body('text').isLength({ max: 500 }).withMessage('Post cannot exceed 500 characters')
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -27,20 +28,22 @@ router.post('/', protect, multerUploads, [
   }
 
   const { text } = req.body;
-  if (!text && !req.file) {
-    return res.status(400).json({ success: false, message: 'Post must have text or an image.' });
+  if (!text && (!req.files || req.files.length === 0)) {
+    return res.status(400).json({ success: false, message: 'Post must have text or at least one image.' });
   }
 
   try {
-    let imageString = '';
-    if (req.file) {
-      const b64 = Buffer.from(req.file.buffer).toString('base64');
-      imageString = `data:${req.file.mimetype};base64,${b64}`;
+    const imageStrings = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const b64 = Buffer.from(file.buffer).toString('base64');
+        imageStrings.push(`data:${file.mimetype};base64,${b64}`);
+      }
     }
 
     const post = await Post.create({
       text: text || '',
-      image: imageString,
+      images: imageStrings,
       author: req.user._id
     });
 
@@ -52,7 +55,7 @@ router.post('/', protect, multerUploads, [
   }
 });
 
-// GET posts by user ID (no changes needed here)
+// GET posts by user ID (no changes)
 router.get('/user/:userId', async (req, res) => {
     try {
         const posts = await Post.find({ author: req.params.userId }).sort({ createdAt: -1 });
