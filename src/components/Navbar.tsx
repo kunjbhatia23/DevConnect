@@ -29,8 +29,7 @@ const Navbar: React.FC = () => {
           </Link>
 
           <div className="flex items-center space-x-4">
-            {user ? (
-              // This block now safely handles the user object
+            {user && (
               <div className="flex items-center space-x-2">
                 <Link to="/" className="flex items-center space-x-2 px-3 py-2 rounded-md text-secondary-700 dark:text-secondary-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors">
                   <Home className="w-5 h-5" />
@@ -41,9 +40,6 @@ const Navbar: React.FC = () => {
                   <span className="hidden sm:inline">Profile</span>
                 </Link>
               </div>
-            ) : (
-              // If there's no user, we don't render user-specific links.
-              <div className="flex items-center space-x-2"></div>
             )}
             
             <div className="flex items-center space-x-4">
