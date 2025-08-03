@@ -29,8 +29,11 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete }) => {
   const { user } = useAuth();
-  const [likes, setLikes] = useState<string[]>(post.likes);
+  
+  // SAFE INITIALIZATION: Initialize state with safe, default values.
+  const [likes, setLikes] = useState<string[]>(post.likes || []);
   const [isLiked, setIsLiked] = useState(false);
+  
   const [showComments, setShowComments] = useState(false);
   const [viewingPost, setViewingPost] = useState<Post | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -38,14 +41,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const [menuOpen, setMenuOpen] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
+  // This useEffect is the ONLY place that sets the liked status after the component mounts.
+  // It safely checks for `user` before doing anything.
   useEffect(() => {
-    if (user) {
+    if (user && post.likes) {
       setIsLiked(post.likes.includes(user._id));
     } else {
       setIsLiked(false);
     }
-    setLikes(post.likes);
-  }, [post, user]);
+    setLikes(post.likes || []);
+  }, [post, user]); // Dependency array ensures this runs when post or user status changes.
 
   const handleLike = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -61,14 +66,17 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       ? [...originalLikes, user._id]
       : originalLikes.filter(id => id !== user._id);
     
-    setLikes(newLikes);
+    // Optimistic UI update
     setIsLiked(newIsLiked);
+    setLikes(newLikes);
 
     try {
       const res = await axios.put(`/posts/${post._id}/like`);
+      // Update with the definitive state from the server
       onPostUpdate(res.data.data.post);
     } catch (error) {
       console.error('Failed to like post', error);
+      // Revert UI on error
       setLikes(originalLikes);
       setIsLiked(!newIsLiked);
       toast.error('Could not update like.');
@@ -92,6 +100,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     }
   };
 
+  // Keyboard navigation for image viewer
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!viewingPost) return;
@@ -132,6 +141,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     }
   };
 
+  // Helper Functions
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -148,10 +158,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   
   const getInitials = (name: string) => {
     const names = name.split(' ');
-    if (names.length > 1) {
-      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
+    return (names.length > 1 ? `${names[0][0]}${names[names.length - 1][0]}` : name.substring(0, 2)).toUpperCase();
   };
 
   const hasImages = post.images && post.images.length > 0;
@@ -159,44 +166,22 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   return (
     <>
       {isConfirmingDelete && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 transition-opacity"
-          onClick={() => setIsConfirmingDelete(false)}
-        >
-          <div 
-            className="bg-white dark:bg-secondary-800 rounded-xl shadow-2xl w-full max-w-md mx-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4" onClick={() => setIsConfirmingDelete(false)}>
+          <div className="bg-white dark:bg-secondary-800 rounded-xl shadow-2xl w-full max-w-md mx-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
                 <div className="flex items-start space-x-4">
                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 sm:mx-0">
                         <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" aria-hidden="true" />
                     </div>
                     <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-secondary-900 dark:text-secondary-200" id="modal-title">
-                            Delete post
-                        </h3>
-                        <p className="mt-2 text-sm text-secondary-600 dark:text-secondary-400">
-                            Are you sure you want to delete this post? This action cannot be undone.
-                        </p>
+                        <h3 className="text-lg font-semibold text-secondary-900 dark:text-secondary-200" id="modal-title">Delete post</h3>
+                        <p className="mt-2 text-sm text-secondary-600 dark:text-secondary-400">Are you sure you want to delete this post? This action cannot be undone.</p>
                     </div>
                 </div>
             </div>
             <div className="bg-secondary-50 dark:bg-secondary-900/50 px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 rounded-b-xl">
-              <button
-                type="button"
-                className="mt-3 sm:mt-0 w-full inline-flex justify-center rounded-md border border-secondary-300 dark:border-secondary-600 shadow-sm px-4 py-2 bg-white dark:bg-secondary-700 text-base font-medium text-secondary-700 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-secondary-800 sm:w-auto sm:text-sm transition-colors"
-                onClick={() => setIsConfirmingDelete(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-secondary-800 sm:w-auto sm:text-sm transition-colors"
-                onClick={confirmDelete}
-              >
-                Delete
-              </button>
+              <button type="button" className="mt-3 sm:mt-0 w-full inline-flex justify-center rounded-md border border-secondary-300 dark:border-secondary-600 shadow-sm px-4 py-2 bg-white dark:bg-secondary-700 text-base font-medium text-secondary-700 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-600" onClick={() => setIsConfirmingDelete(false)}>Cancel</button>
+              <button type="button" className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700" onClick={confirmDelete}>Delete</button>
             </div>
           </div>
         </div>
@@ -205,26 +190,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       {isEditing && <EditPostModal post={post} onClose={() => setIsEditing(false)} onPostUpdated={onPostUpdate} />}
       
       {viewingPost && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300"
-          onClick={() => setViewingPost(null)}
-        >
-          <button 
-            className="absolute top-4 right-4 text-white hover:text-secondary-300 z-[60]"
-            onClick={() => setViewingPost(null)}
-          >
-            <X size={32} />
-          </button>
-          <div 
-            className="w-full h-full lg:h-[90%] lg:w-[90%] max-w-[1400px] flex flex-col lg:flex-row shadow-2xl lg:rounded-xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50" onClick={() => setViewingPost(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-secondary-300 z-[60]" onClick={() => setViewingPost(null)}><X size={32} /></button>
+          <div className="w-full h-full lg:h-[90%] lg:w-[90%] max-w-[1400px] flex flex-col lg:flex-row shadow-2xl lg:rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="w-full lg:w-2/3 h-1/2 lg:h-full bg-black flex items-center justify-center relative">
               <img src={viewingPost.images?.[currentImageIndex]} alt="Post content" className="max-w-full max-h-full object-contain" />
               {viewingPost.images && viewingPost.images.length > 1 && (
                 <>
-                  <button onClick={handlePrevImage} className="absolute left-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60 transition-colors"><ChevronLeft size={28} /></button>
-                  <button onClick={handleNextImage} className="absolute right-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60 transition-colors"><ChevronRight size={28} /></button>
+                  <button onClick={handlePrevImage} className="absolute left-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60"><ChevronLeft size={28} /></button>
+                  <button onClick={handleNextImage} className="absolute right-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60"><ChevronRight size={28} /></button>
                 </>
               )}
             </div>
@@ -249,9 +223,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                   <button className="flex items-center space-x-2 hover:text-primary-600 dark:hover:text-primary-400 transition-colors py-2 px-3 rounded-md"><Send size={20} /><span>Send</span></button>
                 </div>
               </div>
-              <div className="flex-grow">
-                <CommentSection postId={viewingPost._id} />
-              </div>
+              <div className="flex-grow"><CommentSection postId={viewingPost._id} /></div>
             </div>
           </div>
         </div>
