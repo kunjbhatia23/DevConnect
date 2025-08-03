@@ -1,10 +1,11 @@
+// src/components/ProfileCard.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const ProfileCard: React.FC = () => {
   const { user } = useAuth();
-  if (!user) return null;
+  if (!user || !user._id) return null;
 
   const getInitials = (name: string) => {
     if (!name) return '';
