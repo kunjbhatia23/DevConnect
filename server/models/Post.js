@@ -1,11 +1,15 @@
+// server/models/Post.js
 import mongoose from 'mongoose';
 
 const postSchema = new mongoose.Schema({
   text: {
     type: String,
-    required: [true, 'Post content is required'],
     trim: true,
     maxlength: [500, 'Post cannot exceed 500 characters']
+  },
+  image: {
+    type: String, // Will store the Base64 Data URI
+    default: ''
   },
   author: {
     type: mongoose.Schema.Types.ObjectId,
@@ -24,7 +28,7 @@ const postSchema = new mongoose.Schema({
 postSchema.pre(/^find/, function(next) {
   this.populate({
     path: 'author',
-    select: 'name email'
+    select: 'name email profilePicture'
   });
   next();
 });

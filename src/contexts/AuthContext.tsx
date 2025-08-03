@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 
@@ -7,6 +8,7 @@ interface User {
   email: string;
   bio: string;
   createdAt: string;
+  profilePicture?: string;
 }
 
 interface AuthContextType {
@@ -16,6 +18,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string, bio: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,8 +40,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  // Configure axios defaults
-  axios.defaults.baseURL = 'http://localhost:5000/api';
+  axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -62,11 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post('/auth/login', {
-        email,
-        password,
-      });
-
+      const response = await axios.post('/auth/login', { email, password });
       const { user: userData, token: userToken } = response.data.data;
       
       setUser(userData);
@@ -80,13 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (name: string, email: string, password: string, bio: string) => {
     try {
-      const response = await axios.post('/auth/register', {
-        name,
-        email,
-        password,
-        bio,
-      });
-
+      const response = await axios.post('/auth/register', { name, email, password, bio });
       const { user: userData, token: userToken } = response.data.data;
       
       setUser(userData);
@@ -112,6 +104,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     loading,
+    setUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

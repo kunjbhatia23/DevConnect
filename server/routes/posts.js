@@ -1,101 +1,65 @@
+// server/routes/posts.js
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import Post from '../models/Post.js';
 import protect from '../middleware/auth.js';
+import { multerUploads } from '../middleware/multer.js';
 
 const router = express.Router();
 
-// @desc    Get all posts
-// @route   GET /api/posts
-// @access  Public
+// GET all posts (no changes needed here, but included for completeness)
 router.get('/', async (req, res) => {
   try {
-    const posts = await Post.find()
-      .sort({ createdAt: -1 })
-      .populate('author', 'name email')
-      .limit(50);
-
-    res.json({
-      success: true,
-      data: { posts }
-    });
+    const posts = await Post.find().sort({ createdAt: -1 }).limit(50);
+    res.json({ success: true, data: { posts } });
   } catch (error) {
-    console.error('Get posts error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching posts'
-    });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// @desc    Create a new post
-// @route   POST /api/posts
-// @access  Private
-router.post('/', protect, [
-  body('text')
-    .trim()
-    .isLength({ min: 1, max: 500 })
-    .withMessage('Post content must be between 1 and 500 characters')
+// Create a new post
+router.post('/', protect, multerUploads, [
+  body('text').isLength({ max: 500 }).withMessage('Post cannot exceed 500 characters')
 ], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { text } = req.body;
+  if (!text && !req.file) {
+    return res.status(400).json({ success: false, message: 'Post must have text or an image.' });
+  }
+
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
+    let imageString = '';
+    if (req.file) {
+      const b64 = Buffer.from(req.file.buffer).toString('base64');
+      imageString = `data:${req.file.mimetype};base64,${b64}`;
     }
 
-    const { text } = req.body;
-
-    // Create post
     const post = await Post.create({
-      text,
+      text: text || '',
+      image: imageString,
       author: req.user._id
     });
 
-    // Populate author information
-    await post.populate('author', 'name email');
-
-    res.status(201).json({
-      success: true,
-      message: 'Post created successfully',
-      data: { post }
-    });
-
+    await post.populate('author', 'name email profilePicture');
+    res.status(201).json({ success: true, data: { post } });
   } catch (error) {
-    console.error('Create post error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while creating post'
-    });
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error while creating post' });
   }
 });
 
-// @desc    Get posts by user ID
-// @route   GET /api/posts/user/:userId
-// @access  Public
+// GET posts by user ID (no changes needed here)
 router.get('/user/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    const posts = await Post.find({ author: userId })
-      .sort({ createdAt: -1 })
-      .populate('author', 'name email');
-
-    res.json({
-      success: true,
-      data: { posts }
-    });
-  } catch (error) {
-    console.error('Get user posts error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching user posts'
-    });
-  }
+    try {
+        const posts = await Post.find({ author: req.params.userId }).sort({ createdAt: -1 });
+        res.json({ success: true, data: { posts } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
 });
 
 export default router;
