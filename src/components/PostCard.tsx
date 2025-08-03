@@ -5,7 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import CommentSection from './CommentSection';
 import EditPostModal from './EditPostModal';
 import toast from 'react-hot-toast';
-import { Clock, X, ThumbsUp, MessageCircle, MoreHorizontal, ChevronLeft, ChevronRight, Repeat, Send } from 'lucide-react';
+// Add AlertTriangle to the lucide-react imports
+import { Clock, X, ThumbsUp, MessageCircle, MoreHorizontal, ChevronLeft, ChevronRight, Repeat, Send, AlertTriangle } from 'lucide-react';
 
 interface Post {
   _id: string;
@@ -36,6 +37,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false); // State for the new modal
 
   useEffect(() => {
     setCurrentPost(post);
@@ -64,19 +66,25 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     }
   };
 
-  const handleDelete = async () => {
+  // This function now just opens the confirmation modal
+  const handleDelete = () => {
     setMenuOpen(false);
-    if (window.confirm('Are you sure you want to delete this post?')) {
-        try {
-            await axios.delete(`/posts/${post._id}`);
-            toast.success('Post deleted');
-            onPostDelete(post._id);
-        } catch (error) {
-            toast.error('Failed to delete post');
-        }
-    }
+    setIsConfirmingDelete(true);
   };
   
+  // This new function will run the actual delete logic
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`/posts/${post._id}`);
+      toast.success('Post deleted');
+      onPostDelete(post._id);
+    } catch (error) {
+      toast.error('Failed to delete post');
+    } finally {
+      setIsConfirmingDelete(false); // Close the modal
+    }
+  };
+
   const handlePostUpdated = (updatedPost: Post) => {
       onPostUpdate(updatedPost);
   };
@@ -147,6 +155,51 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
 
   return (
     <>
+      {/* ADD THE NEW MODAL JSX HERE */}
+      {isConfirmingDelete && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 transition-opacity"
+          onClick={() => setIsConfirmingDelete(false)}
+        >
+          <div 
+            className="bg-white dark:bg-secondary-800 rounded-xl shadow-2xl w-full max-w-md mx-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+                <div className="flex items-start space-x-4">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 sm:mx-0">
+                        <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" aria-hidden="true" />
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-secondary-900 dark:text-secondary-200" id="modal-title">
+                            Delete post
+                        </h3>
+                        <p className="mt-2 text-sm text-secondary-600 dark:text-secondary-400">
+                            Are you sure you want to delete this post? This action cannot be undone.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div className="bg-secondary-50 dark:bg-secondary-900/50 px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 rounded-b-xl">
+              <button
+                type="button"
+                className="mt-3 sm:mt-0 w-full inline-flex justify-center rounded-md border border-secondary-300 dark:border-secondary-600 shadow-sm px-4 py-2 bg-white dark:bg-secondary-700 text-base font-medium text-secondary-700 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-secondary-800 sm:w-auto sm:text-sm transition-colors"
+                onClick={() => setIsConfirmingDelete(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-secondary-800 sm:w-auto sm:text-sm transition-colors"
+                onClick={confirmDelete}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isEditing && <EditPostModal post={currentPost} onClose={() => setIsEditing(false)} onPostUpdated={handlePostUpdated} />}
       
       {viewingPost && (
