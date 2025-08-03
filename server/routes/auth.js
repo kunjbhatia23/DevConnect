@@ -27,7 +27,6 @@ router.post('/register', [
     .withMessage('Bio cannot exceed 500 characters')
 ], async (req, res) => {
   try {
-    // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -39,7 +38,6 @@ router.post('/register', [
 
     const { name, email, password, bio } = req.body;
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -48,7 +46,6 @@ router.post('/register', [
       });
     }
 
-    // Create user
     const user = await User.create({
       name,
       email,
@@ -56,7 +53,6 @@ router.post('/register', [
       bio: bio || ''
     });
 
-    // Generate token
     const token = generateToken(user._id);
 
     res.status(201).json({
@@ -90,7 +86,6 @@ router.post('/login', [
     .withMessage('Password is required')
 ], async (req, res) => {
   try {
-    // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -102,7 +97,6 @@ router.post('/login', [
 
     const { email, password } = req.body;
 
-    // Check if user exists (including password for comparison)
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(401).json({
@@ -111,7 +105,6 @@ router.post('/login', [
       });
     }
 
-    // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -120,11 +113,7 @@ router.post('/login', [
       });
     }
 
-    // Generate token
     const token = generateToken(user._id);
-
-    // The user's password will be removed by the toJSON method in the User model.
-    // No need to manually set it to undefined.
 
     res.json({
       success: true,
