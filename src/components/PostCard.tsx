@@ -1,3 +1,4 @@
+// src/components/PostCard.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -5,7 +6,6 @@ import { useAuth } from '../contexts/AuthContext';
 import CommentSection from './CommentSection';
 import EditPostModal from './EditPostModal';
 import toast from 'react-hot-toast';
-// Add AlertTriangle to the lucide-react imports
 import { Clock, X, ThumbsUp, MessageCircle, MoreHorizontal, ChevronLeft, ChevronRight, Repeat, Send, AlertTriangle } from 'lucide-react';
 
 interface Post {
@@ -31,22 +31,24 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const { user } = useAuth();
   const [currentPost, setCurrentPost] = useState<Post>(post);
   const [likes, setLikes] = useState<string[]>(post.likes);
-  const [isLiked, setIsLiked] = useState(user ? post.likes.includes(user._id) : false);
+  const [isLiked, setIsLiked] = useState(false); // Initialize to false
   const [showComments, setShowComments] = useState(false);
   const [viewingPost, setViewingPost] = useState<Post | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false); // State for the new modal
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   useEffect(() => {
     setCurrentPost(post);
     setLikes(post.likes);
-  }, [post]);
-
-  useEffect(() => {
-    setIsLiked(user ? likes.includes(user._id) : false);
-  }, [user, likes]);
+    // Safely check for user and update liked state
+    if (user) {
+      setIsLiked(post.likes.includes(user._id));
+    } else {
+      setIsLiked(false);
+    }
+  }, [post, user]); // Add user to dependency array
 
   const handleLike = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -55,24 +57,32 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       return;
     }
     const originalLikes = likes;
-    const newLikes = isLiked ? likes.filter(id => id !== user._id) : [...likes, user._id];
+    const newIsLiked = !isLiked;
+    
+    // Optimistically update the UI
+    const newLikes = newIsLiked 
+      ? [...likes, user._id] 
+      : likes.filter(id => id !== user._id);
     setLikes(newLikes);
-    setIsLiked(!isLiked);
+    setIsLiked(newIsLiked);
+
     try {
-      await axios.put(`/posts/${post._id}/like`);
+      const response = await axios.put(`/posts/${post._id}/like`);
+      // Update state from server response to ensure consistency
+      onPostUpdate(response.data.data.post);
     } catch (error) {
       console.error('Failed to like post', error);
+      // Revert on error
       setLikes(originalLikes);
+      setIsLiked(!newIsLiked);
     }
   };
 
-  // This function now just opens the confirmation modal
   const handleDelete = () => {
     setMenuOpen(false);
     setIsConfirmingDelete(true);
   };
   
-  // This new function will run the actual delete logic
   const confirmDelete = async () => {
     try {
       await axios.delete(`/posts/${post._id}`);
@@ -81,7 +91,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     } catch (error) {
       toast.error('Failed to delete post');
     } finally {
-      setIsConfirmingDelete(false); // Close the modal
+      setIsConfirmingDelete(false);
     }
   };
 
@@ -155,7 +165,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
 
   return (
     <>
-      {/* ADD THE NEW MODAL JSX HERE */}
       {isConfirmingDelete && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 transition-opacity"
