@@ -19,9 +19,10 @@ interface UserProfile {
 interface Post {
   _id: string;
   text: string;
-  images?: string[]; 
+  images?: string[];
+  likes: string[]; 
   author: {
-    _id: string;
+    _id:string;
     name: string;
     profilePicture?: string;
   };

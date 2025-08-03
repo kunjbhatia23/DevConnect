@@ -12,6 +12,7 @@ interface Post {
   _id: string;
   text: string;
   images?: string[];
+  likes: string[]; 
   author: {
     _id: string;
     name: string;

@@ -7,10 +7,14 @@ const postSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'Post cannot exceed 500 characters']
   },
-  images: { // Changed 'image' to 'images' and type to an array of Strings
+  images: {
     type: [String], 
     default: []
   },
+  likes: [{ // Add this likes array
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   author: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -24,7 +28,6 @@ const postSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Populate author information by default
 postSchema.pre(/^find/, function(next) {
   this.populate({
     path: 'author',
