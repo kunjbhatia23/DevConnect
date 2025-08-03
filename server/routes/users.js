@@ -1,5 +1,5 @@
-// server/routes/users.js
 import express from 'express';
+import { body, validationResult } from 'express-validator'; // Import validation tools
 import User from '../models/User.js';
 import protect from '../middleware/auth.js';
 // Import the correct middleware
@@ -19,6 +19,42 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
+// Update user bio
+router.put(
+  '/bio',
+  protect,
+  [
+    body('bio')
+      .isLength({ max: 500 })
+      .withMessage('Bio cannot exceed 500 characters'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: 'User not found.' });
+      }
+
+      user.bio = req.body.bio || '';
+      const updatedUser = await user.save();
+
+      res.json({ success: true, data: { user: updatedUser } });
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ success: false, message: 'Server error while updating bio.' });
+    }
+  }
+);
 
 // Update user profile picture
 router.put('/pfp', protect, singleUpload, async (req, res) => { // Use singleUpload here
