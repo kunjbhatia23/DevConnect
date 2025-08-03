@@ -22,7 +22,6 @@ router.get('/', async (req, res) => {
 // @desc    Get posts by a specific user ID
 // @route   GET /api/posts/user/:userId
 // @access  Public
-// THIS ROUTE IS NOW PLACED BEFORE ANY ROUTES WITH A GENERAL '/:id' PARAMETER
 router.get('/user/:userId', async (req, res) => {
     try {
         const posts = await Post.find({ author: req.params.userId }).sort({ createdAt: -1 });
@@ -43,12 +42,10 @@ router.post('/', protect, multipleUploads, [
   if (!errors.isEmpty()) {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
-
   const { text } = req.body;
   if (!text && (!req.files || req.files.length === 0)) {
     return res.status(400).json({ success: false, message: 'Post must have text or at least one image.' });
   }
-
   try {
     const imageStrings = [];
     if (req.files && req.files.length > 0) {
@@ -57,13 +54,11 @@ router.post('/', protect, multipleUploads, [
         imageStrings.push(`data:${file.mimetype};base64,${b64}`);
       }
     }
-
     const post = await Post.create({
       text: text || '',
       images: imageStrings,
       author: req.user._id
     });
-
     await post.populate('author', 'name email profilePicture');
     res.status(201).json({ success: true, data: { post } });
   } catch (error) {
@@ -72,27 +67,88 @@ router.post('/', protect, multipleUploads, [
   }
 });
 
+// @desc    Update a post
+// @route   PUT /api/posts/:id
+// @access  Private
+router.put('/:id', protect, multipleUploads, [
+  body('text').isLength({ max: 500 }).withMessage('Post cannot exceed 500 characters')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+    if (post.author.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ success: false, message: 'User not authorized' });
+    }
+
+    const { text, existingImages } = req.body;
+    let finalImages = existingImages ? (Array.isArray(existingImages) ? existingImages : [existingImages]) : [];
+
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const b64 = Buffer.from(file.buffer).toString('base64');
+        finalImages.push(`data:${file.mimetype};base64,${b64}`);
+      }
+    }
+
+    post.text = text || '';
+    post.images = finalImages;
+    
+    const updatedPost = await post.save();
+    await updatedPost.populate('author', 'name email profilePicture');
+    
+    res.json({ success: true, data: { post: updatedPost } });
+  } catch (error) {
+    console.error('Update post error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+// @desc    Delete a post
+// @route   DELETE /api/posts/:id
+// @access  Private
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+    if (post.author.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ success: false, message: 'User not authorized' });
+    }
+    await Comment.deleteMany({ post: req.params.id });
+    await post.deleteOne();
+    res.json({ success: true, message: 'Post removed' });
+  } catch (error) {
+    console.error('Delete post error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+
 // @desc    Like/Unlike a post
 // @route   PUT /api/posts/:id/like
 // @access  Private
 router.put('/:id/like', protect, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
-
     if (!post) {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
-
     if (post.likes.some(like => like.equals(req.user._id))) {
       post.likes = post.likes.filter(like => !like.equals(req.user._id));
     } else {
       post.likes.push(req.user._id);
     }
-
     await post.save();
     const updatedPost = await Post.findById(post._id);
     res.json({ success: true, data: { post: updatedPost } });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -122,22 +178,18 @@ router.post('/:id/comments', protect, [
   if (!errors.isEmpty()) {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
-
   try {
     const post = await Post.findById(req.params.id);
     if (!post) {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
-
     const newComment = new Comment({
       text: req.body.text,
       author: req.user._id,
       post: req.params.id
     });
-
     const comment = await newComment.save();
     await comment.populate('author', 'name profilePicture');
-
     res.status(201).json({ success: true, data: { comment } });
   } catch (error) {
     console.error(error);

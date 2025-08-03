@@ -40,6 +40,16 @@ const Home: React.FC = () => {
     fetchPosts().finally(() => setLoading(false));
   }, []);
 
+  const handlePostUpdate = (updatedPost: Post) => {
+    setPosts(currentPosts => 
+      currentPosts.map(p => (p._id === updatedPost._id ? updatedPost : p))
+    );
+  };
+
+  const handlePostDelete = (postId: string) => {
+    setPosts(currentPosts => currentPosts.filter(p => p._id !== postId));
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center pt-24">
@@ -83,7 +93,12 @@ const Home: React.FC = () => {
             </div>
           ) : (
             posts.map((post) => (
-              <PostCard key={post._id} post={post} />
+              <PostCard 
+                key={post._id} 
+                post={post}
+                onPostUpdate={handlePostUpdate}
+                onPostDelete={handlePostDelete}
+              />
             ))
           )}
         </div>

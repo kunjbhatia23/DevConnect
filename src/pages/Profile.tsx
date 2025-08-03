@@ -57,6 +57,16 @@ const Profile: React.FC = () => {
     };
     fetchProfile();
   }, [id]);
+  
+  const handlePostUpdate = (updatedPost: Post) => {
+    setPosts(currentPosts => 
+      currentPosts.map(p => (p._id === updatedPost._id ? updatedPost : p))
+    );
+  };
+
+  const handlePostDelete = (postId: string) => {
+    setPosts(currentPosts => currentPosts.filter(p => p._id !== postId));
+  };
 
   const handlePfpChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,7 +127,6 @@ const Profile: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
-      {/* --- New Profile Header --- */}
       <div className="bg-white dark:bg-secondary-800 rounded-xl shadow-lg border border-secondary-200 dark:border-secondary-700 overflow-hidden mb-8">
         <div className="h-40 bg-gradient-to-r from-primary-500 to-indigo-600" />
         <div className="px-6 pb-6 relative">
@@ -166,13 +175,12 @@ const Profile: React.FC = () => {
         </div>
       </div>
 
-      {/* --- Posts Section --- */}
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-secondary-800 dark:text-secondary-200 pb-4">
           {isOwnProfile ? 'Your Posts' : `Posts by ${profile.name}`}
         </h2>
         {posts.length > 0 ? (
-          posts.map(post => <PostCard key={post._id} post={post} />)
+          posts.map(post => <PostCard key={post._id} post={post} onPostUpdate={handlePostUpdate} onPostDelete={handlePostDelete} />)
         ) : (
           <div className="bg-white dark:bg-secondary-800 rounded-lg shadow-sm border border-secondary-200 dark:border-secondary-700 p-8 text-center">
             <MessageSquare className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
