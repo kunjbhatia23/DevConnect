@@ -57,7 +57,9 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ post, onClose, onPostUpda
 
     try {
       // The 'headers' configuration has been removed from this API call
-      const res = await axios.put(`/posts/${post._id}`, formData);
+      const res = await axios.put(`/posts/${post._id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       
       onPostUpdated(res.data.data.post);
       toast.success('Post updated successfully!');

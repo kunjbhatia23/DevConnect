@@ -83,7 +83,7 @@ router.put('/:id', protect, multipleUploads, [
     if (!post) {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
-    if (post.author.toString() !== req.user._id.toString()) {
+    if (post.author._id.toString() !== req.user._id.toString()) {
       return res.status(401).json({ success: false, message: 'User not authorized' });
     }
 
@@ -119,7 +119,7 @@ router.delete('/:id', protect, async (req, res) => {
     if (!post) {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
-    if (post.author.toString() !== req.user._id.toString()) {
+    if (post.author._id.toString() !== req.user._id.toString()) {
       return res.status(401).json({ success: false, message: 'User not authorized' });
     }
     await Comment.deleteMany({ post: req.params.id });
