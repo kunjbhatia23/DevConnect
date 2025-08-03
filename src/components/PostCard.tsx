@@ -29,11 +29,8 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete }) => {
   const { user } = useAuth();
-  
-  // SAFE INITIALIZATION: Initialize state with safe, default values.
   const [likes, setLikes] = useState<string[]>(post.likes || []);
   const [isLiked, setIsLiked] = useState(false);
-  
   const [showComments, setShowComments] = useState(false);
   const [viewingPost, setViewingPost] = useState<Post | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -41,16 +38,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const [menuOpen, setMenuOpen] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
-  // This useEffect is the ONLY place that sets the liked status after the component mounts.
-  // It safely checks for `user` before doing anything.
   useEffect(() => {
-    if (user && post.likes) {
+    if (user && post && post.likes) {
       setIsLiked(post.likes.includes(user._id));
     } else {
       setIsLiked(false);
     }
     setLikes(post.likes || []);
-  }, [post, user]); // Dependency array ensures this runs when post or user status changes.
+  }, [post, user]);
 
   const handleLike = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -66,17 +61,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       ? [...originalLikes, user._id]
       : originalLikes.filter(id => id !== user._id);
     
-    // Optimistic UI update
     setIsLiked(newIsLiked);
     setLikes(newLikes);
 
     try {
       const res = await axios.put(`/posts/${post._id}/like`);
-      // Update with the definitive state from the server
       onPostUpdate(res.data.data.post);
     } catch (error) {
       console.error('Failed to like post', error);
-      // Revert UI on error
       setLikes(originalLikes);
       setIsLiked(!newIsLiked);
       toast.error('Could not update like.');
@@ -100,7 +92,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     }
   };
 
-  // Keyboard navigation for image viewer
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!viewingPost) return;
@@ -110,11 +101,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     };
     
     window.addEventListener('keydown', handleKeyDown);
-    if (viewingPost) {
-      document.body.classList.add('overflow-hidden');
-    } else {
-      document.body.classList.remove('overflow-hidden');
-    }
+    if (viewingPost) document.body.classList.add('overflow-hidden');
+    else document.body.classList.remove('overflow-hidden');
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -130,23 +118,21 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const handleNextImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (viewingPost && viewingPost.images) {
-      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % viewingPost.images!.length);
+      setCurrentImageIndex((prev) => (prev + 1) % viewingPost.images!.length);
     }
   };
 
   const handlePrevImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (viewingPost && viewingPost.images) {
-      setCurrentImageIndex((prevIndex) => (prevIndex - 1 + viewingPost.images!.length) % viewingPost.images!.length);
+      setCurrentImageIndex((prev) => (prev - 1 + viewingPost.images!.length) % viewingPost.images!.length);
     }
   };
 
-  // Helper Functions
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
     if (diffInSeconds < 60) return 'Just now';
     const diffInMinutes = Math.floor(diffInSeconds / 60);
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
@@ -160,6 +146,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     const names = name.split(' ');
     return (names.length > 1 ? `${names[0][0]}${names[names.length - 1][0]}` : name.substring(0, 2)).toUpperCase();
   };
+
+  // Failsafe check: Do not render anything if the post author is missing.
+  if (!post || !post.author) {
+    return null;
+  }
 
   const hasImages = post.images && post.images.length > 0;
 
