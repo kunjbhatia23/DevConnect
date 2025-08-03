@@ -1,4 +1,4 @@
-#LinkedIn Clone
+# LinkedIn Clone
 
 A full-stack MERN community platform with user authentication, a public post feed, and profile pages. This project was built as part of an internship application.
 
