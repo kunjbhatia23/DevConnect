@@ -2,6 +2,7 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import generateToken from '../utils/generateToken.js';
+import protect from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -122,8 +123,8 @@ router.post('/login', [
     // Generate token
     const token = generateToken(user._id);
 
-    // Remove password from user object
-    user.password = undefined;
+    // The user's password will be removed by the toJSON method in the User model.
+    // No need to manually set it to undefined.
 
     res.json({
       success: true,
@@ -146,8 +147,6 @@ router.post('/login', [
 // @desc    Get current user profile
 // @route   GET /api/auth/me
 // @access  Private
-import protect from '../middleware/auth.js';
-
 router.get('/me', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
